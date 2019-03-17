@@ -1,45 +1,38 @@
-import { applyMiddleware, createStore} from 'redux';
+import {applyMiddleware, createStore, bindActionCreators} from "redux";
+import axios from "axios";
+import logger from "redux-logger";
+import thunk from "redux-thunk";
+import promise from "redux-promise-middleware";
 
-const reducer = function(initialState=0, action){
-    if(action.type === "INC"){
-        return initialState + 1;
-    }
-    else if(action.type === "DEC"){
-        return initialState - 1;
-    }
-    else if(action.type === "E"){
-        throw new Error("AAAA!")
-    }
-
-    
+const initialState = {
+    fetching: false,
+    fetched: false,
+    users: [],
+    error: null,
 }
 
-const logger = (store) => (next) => (action) => {
-    console.log("action fired", action);
-    next(action);
-};
-
-const error = (store) => (next) => (action) => {
-    try{
-        next(action);
+const reducer = (state=initialState, action) => {
+    switch(action.type){
+        case "FETCH_USERS_PENDING": {
+            return {...state, fetching: true};
+            break;
+        }
+        case "FETCH_USERS_REJECTED": {
+            return {...state, fetching: false, error: action.payload};
+            break;
+        }
+        case "RECIEVE_USERS_FULFILLED": {
+            return {...state, fetching: false, fetched: true, users: action.payload};
+            break;
+        }
     }
-    catch(e) {
-        console.log("AHHH", e);
-    }
-};
+    return state;
+}
 
-const middleware = applyMiddleware(logger);
+const middleware = applyMiddleware(promise(), thunk, logger());
+const store = createStore(reducer, middleware);
 
-const store = createStore(reducers, 0, middleware);
-
-store.subscribe(() => {
-    console.log("store changed", store.getState());
-});
-
-store.dispatch({type: "INC", payload: 1})
-store.dispatch({type: "INC", payload: 1})
-store.dispatch({type: "INC", payload: 1})
-store.dispatch({type: "DEC", payload: 1})
-store.dispatch({type: "DEC", payload: 1})
-store.dispatch({type: "DEC", payload: 1})
-store.dispatch({type: "E"})
+store.dispatch({
+    type: "FOO",
+    payload: axios.get("http://rest.learncode.academy/api/wstern/users")
+})
